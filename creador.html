@@ -17,44 +17,47 @@
     }
     .ola { background: #28a745; color: white; }
     .todos { background: #ffc107; color: black; }
-    .imagen { background: #17a2b8; color: white; }
+    #qrcode { margin: 20px auto; }
   </style>
 </head>
 <body>
   <h1>Panel del Creador</h1>
+  <div id="qrcode"></div>
   <button class="ola" onclick="lanzarOla()">🌊 Lanzar Ola</button>
   <button class="todos" onclick="encenderTodos()">💡 Encender todos</button>
-  <button class="imagen" onclick="mostrarImagen()">🖼 Mostrar imagen</button>
 
-  <pre id="log"></pre>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-database.js";
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-
-    const log = (msg) => {
-      document.getElementById("log").textContent += msg + "\n";
+    // ⚠️ Usa tus credenciales de Firebase
+    const firebaseConfig = {
+      apiKey: "TU_API_KEY",
+      authDomain: "TU_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://TU_PROJECT_ID.firebaseio.com",
+      projectId: "TU_PROJECT_ID",
+      storageBucket: "TU_PROJECT_ID.appspot.com",
+      messagingSenderId: "TU_SENDER_ID",
+      appId: "TU_APP_ID"
     };
 
-    socket.on("connect", () => log("🔌 Conectado como creador: " + socket.id));
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
+    // 👉 Generar QR con la URL de invitado
+    const invitadoURL = "https://pixelphone-two.vercel.app/invitado.html";
+    QRCode.toCanvas(document.getElementById("qrcode"), invitadoURL, { width: 200 }, (err) => {
+      if (err) console.error(err);
+    });
+
+    // 👉 Funciones de control
     function lanzarOla() {
-      log("🌊 Enviando ola...");
-      socket.emit("control", { accion: "ola" });
+      set(ref(db, "comando"), { accion: "ola", time: Date.now() });
     }
 
     function encenderTodos() {
-      log("💡 Enviando encender todos...");
-      socket.emit("control", { accion: "todos" });
-    }
-
-    function mostrarImagen() {
-      log("🖼 Enviando imagen...");
-      const imagen = [
-        ["red", "blue"],
-        ["green", "yellow"]
-      ];
-      socket.emit("control", { accion: "imagen", data: imagen });
+      set(ref(db, "comando"), { accion: "todos", time: Date.now() });
     }
   </script>
 </body>
