@@ -23,51 +23,37 @@
       transition: all 0.3s ease;
     }
     .btn:hover { opacity: 0.9; transform: scale(1.05); }
-    .creador { background: #28a745; color: white; }
-    .invitado { background: #007BFF; color: white; }
-    .ola { background: #28a745; color: white; margin-top: 20px; }
+    .ola { background: #28a745; color: white; }
     .todos { background: #ffc107; color: black; }
-    #qr-container { margin-top: 40px; display: none; }
+    .apagar { background: #dc3545; color: white; }
+    #qr-container { margin-top: 40px; }
     #qrcode { margin: 20px auto; }
-    .link {
-      color: #007BFF;
-      text-decoration: none;
-      font-size: 16px;
-    }
+    .link { color: #007BFF; text-decoration: none; font-size: 16px; }
   </style>
 </head>
 <body>
   <h1>🌊 Bienvenido a PixelPhone</h1>
-  <button class="btn creador" onclick="activarCreador()">Soy Creador</button>
-  <button class="btn invitado" onclick="window.location.href='invitado.html'">Soy Invitado</button>
-
   <div id="qr-container">
     <h2>Escanea este código QR para unirte como invitado</h2>
     <canvas id="qrcode"></canvas>
     <p><a id="invite-link" class="link" href="invitado.html">o haz clic aquí</a></p>
 
     <h2>Controles</h2>
-    <button class="ola" onclick="enviar('ola')">🌊 Lanzar Ola</button>
-    <button class="todos" onclick="enviar('todos')">💡 Encender todos</button>
+    <button class="btn ola" onclick="enviar('ola')">🌊 Lanzar Ola</button>
+    <button class="btn todos" onclick="enviar('todos')">💡 Encender Todos</button>
+    <button class="btn apagar" onclick="enviar('apagar')">🛑 Apagar Todos</button>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script>
-    function activarCreador() {
-      document.getElementById("qr-container").style.display = "block";
+    // Generar QR con la URL de invitado
+    const invitadoURL = window.location.origin + "/invitado.html";
+    QRCode.toCanvas(document.getElementById("qrcode"), invitadoURL, { width: 200 }, (err) => {
+      if (err) console.error(err);
+    });
+    document.getElementById("invite-link").href = invitadoURL;
 
-      // ⚠️ URL de invitados (tu dominio de Vercel)
-      const invitadoURL = window.location.origin + "/invitado.html";
-
-      // Generar QR
-      QRCode.toCanvas(document.getElementById("qrcode"), invitadoURL, { width: 200 }, (err) => {
-        if (err) console.error(err);
-      });
-
-      document.getElementById("invite-link").href = invitadoURL;
-    }
-
-    // 👉 Versión con API en Vercel (sin DB ni WebSocket)
+    // Función para mandar comandos
     async function enviar(accion) {
       await fetch('/api/comando', {
         method: 'POST',
@@ -78,4 +64,3 @@
   </script>
 </body>
 </html>
-
