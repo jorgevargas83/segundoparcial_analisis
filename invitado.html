@@ -31,24 +31,32 @@
     clearInterval(parpadeo);
     document.body.style.backgroundColor = "black";
     activo = true;
-    console.log("✅ Detectado: parpadeo apagado, esperando instrucciones...");
+    console.log("✅ Detectado: parpadeo apagado, esperando órdenes...");
   });
 
   // 🌊 Ola secuencial
   socket.on("ola", (data) => {
-    if (!activo) return;
+    if (!activo) {
+      console.log("⚠️ Ignorando ola: aún no estoy detectado");
+      return;
+    }
     setTimeout(() => {
       document.body.style.backgroundColor = "blue";
+      console.log("🌊 Ola activada");
       setTimeout(() => {
         document.body.style.backgroundColor = "black";
       }, 500);
     }, data.delay);
   });
 
-  // 💡 Encender todos al mismo tiempo
+  // 💡 Encender todos
   socket.on("todos", () => {
-    if (!activo) return;
+    if (!activo) {
+      console.log("⚠️ Ignorando encender todos: aún no estoy detectado");
+      return;
+    }
     document.body.style.backgroundColor = "blue";
+    console.log("💡 Encendido con todos");
     setTimeout(() => {
       document.body.style.backgroundColor = "black";
     }, 1000);
