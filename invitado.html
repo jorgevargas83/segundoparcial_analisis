@@ -7,57 +7,43 @@
     html, body {
       margin: 0; padding: 0;
       height: 100%; width: 100%;
-      background: black; color: white;
-      font-family: Arial, sans-serif;
-      display: flex; justify-content: center; align-items: center;
-      font-size: 20px;
+      background: black;
     }
   </style>
 </head>
 <body>
-  <div id="status">Esperando...</div>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+  const socket = io("http://192.168.1.100:3000"); // ⚠️ Cambia por la IP de tu PC
 
-  <script>
-    const statusDiv = document.getElementById("status");
-    let lastTime = 0;
+  // 🌊 Ola secuencial sincronizada
+  socket.on("ola", (data) => {
+    const now = Date.now();
+    const wait = data.startAt - now + data.delay;
+    setTimeout(() => {
+      document.body.style.backgroundColor = "blue";
+      setTimeout(() => document.body.style.backgroundColor = "black", 500);
+    }, wait);
+  });
 
-    async function checkComando() {
-      try {
-        const res = await fetch("/api/comando");
-        const data = await res.json();
+  // 💡 Encender todos sincronizados
+  socket.on("todos", (data) => {
+    const now = Date.now();
+    const wait = data.startAt - now;
+    setTimeout(() => {
+      document.body.style.backgroundColor = "blue";
+      setTimeout(() => document.body.style.backgroundColor = "black", 1000);
+    }, wait);
+  });
 
-        if (data.time > lastTime) {
-          lastTime = data.time;
-
-          if (data.accion === "ola") {
-            statusDiv.textContent = "🌊 OLA!";
-            document.body.style.background = "blue";
-            setTimeout(() => {
-              document.body.style.background = "black";
-              statusDiv.textContent = "Esperando...";
-            }, 500);
-          }
-
-          if (data.accion === "todos") {
-            statusDiv.textContent = "💡 TODOS!";
-            document.body.style.background = "yellow";
-            setTimeout(() => {
-              document.body.style.background = "black";
-              statusDiv.textContent = "Esperando...";
-            }, 1000);
-          }
-
-          if (data.accion === "apagar") {
-            statusDiv.textContent = "🛑 APAGADO!";
-            document.body.style.background = "black";
-          }
-        }
-      } catch (e) {
-        console.error("Error consultando comando", e);
-      }
-    }
-
-    setInterval(checkComando, 1000);
-  </script>
+  // 🖼 Mostrar imagen
+  socket.on("imagen", (data) => {
+    // cada invitado recibe un color aleatorio de la imagen como ejemplo
+    const colores = ["red", "green", "blue", "yellow"];
+    const color = colores[Math.floor(Math.random() * colores.length)];
+    document.body.style.backgroundColor = color;
+    console.log("🖼 Mostrando color:", color);
+  });
+</script>
 </body>
 </html>
