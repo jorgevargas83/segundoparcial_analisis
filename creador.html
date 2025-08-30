@@ -16,6 +16,7 @@
       display: block;
       margin-left: auto;
       margin-right: auto;
+      margin-top: 15px;
     }
     .ola { background: #28a745; color: white; }
     .todos { background: #ffc107; color: black; }
@@ -53,32 +54,44 @@
       let cap = new cv.VideoCapture(video);
       cap.read(src);
 
+      // --------- Método 1: detección por brillo (grises) ---------
+      let gray = new cv.Mat();
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+
+      let maskGray = new cv.Mat();
+      cv.threshold(gray, maskGray, 200, 255, cv.THRESH_BINARY);
+
+      // --------- Método 2: detección por blanco en HSV ---------
       let hsv = new cv.Mat();
       cv.cvtColor(src, hsv, cv.COLOR_RGBA2RGB);
       cv.cvtColor(hsv, hsv, cv.COLOR_RGB2HSV);
 
-      // 🎯 Detectar blanco (pantalla de invitados parpadeando)
       let low = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [0, 0, 200, 0]);
       let high = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [180, 25, 255, 255]);
-      let mask = new cv.Mat();
-      cv.inRange(hsv, low, high, mask);
+      let maskHSV = new cv.Mat();
+      cv.inRange(hsv, low, high, maskHSV);
 
+      // --------- Unir ambos métodos ---------
+      let combined = new cv.Mat();
+      cv.bitwise_or(maskGray, maskHSV, combined);
+
+      // Buscar contornos
       let contours = new cv.MatVector();
       let hierarchy = new cv.Mat();
-      cv.findContours(mask, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
+      cv.findContours(combined, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
 
       for (let i = 0; i < contours.size(); ++i) {
         let rect = cv.boundingRect(contours.get(i));
-        if (rect.width * rect.height > 2000) { // 👈 sensibilidad
-          console.log("📱 Teléfono detectado en cámara:", rect);
+        if (rect.width * rect.height > 2000) {
+          console.log("📱 Pantalla detectada:", rect);
           socket.emit("telefonoDetectado", {}); // avisar al servidor
         }
       }
 
-      // limpiar memoria
-      src.delete(); hsv.delete(); mask.delete();
-      low.delete(); high.delete();
-      contours.delete(); hierarchy.delete();
+      // liberar memoria
+      src.delete(); gray.delete(); maskGray.delete();
+      hsv.delete(); maskHSV.delete(); low.delete(); high.delete();
+      combined.delete(); contours.delete(); hierarchy.delete();
 
       requestAnimationFrame(procesarFrame);
     }
