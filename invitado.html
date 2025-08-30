@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Invitado</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      background: black;
+    }
+  </style>
+</head>
+<body>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+  const socket = io("http://192.168.1.100:3000"); // cambia la IP
+
+  // Parpadeo inicial
+  let colores = ["red", "blue", "green"];
+  let i = 0;
+  let parpadeo = setInterval(() => {
+    document.body.style.backgroundColor = colores[i % colores.length];
+    i++;
+  }, 500);
+
+  // Cuando el servidor dice que fue detectado
+  socket.on("detectar", () => {
+    clearInterval(parpadeo);
+    document.body.style.backgroundColor = "black";
+    console.log("Teléfono detectado, pasa a modo activo");
+  });
+
+  // Cuando se lanza la ola
+  socket.on("ola", (data) => {
+    setTimeout(() => {
+      document.body.style.backgroundColor = "blue";
+      setTimeout(() => {
+        document.body.style.backgroundColor = "black";
+      }, 500);
+    }, data.delay);
+  });
+</script>
+</body>
+</html>

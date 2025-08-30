@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Creador</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+    video { width: 80%; border: 2px solid black; margin-bottom: 20px; }
+    button {
+      padding: 15px 25px;
+      font-size: 18px;
+      margin: 10px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+    }
+    .ola { background: #28a745; color: white; }
+  </style>
+</head>
+<body>
+  <h1>Panel del Creador</h1>
+  <video id="video" autoplay playsinline></video>
+  <br>
+  <button class="ola" onclick="lanzarOla()">🌊 Lanzar Ola</button>
+
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+  <script>
+    const socket = io("http://192.168.1.100:3000"); // cambia IP
+
+    // Cámara
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => { document.getElementById("video").srcObject = stream; })
+      .catch(err => console.error("No se pudo acceder a la cámara:", err));
+
+    // Procesar con OpenCV
+    function procesarFrame() {
+      if (!cv || !video.videoWidth) {
+        requestAnimationFrame(procesarFrame);
+        return;
+      }
+
+      let src = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
+      let cap = new cv.VideoCapture(video);
+      cap.read(src);
+
+      let hsv = new cv.Mat();
+      cv.cvtColor(src, hsv, cv.COLOR_RGBA2RGB);
+      cv.cvtColor(hsv, hsv, cv.COLOR_RGB2HSV);
+
+      // Detectar colores brillantes (rojo, azul, verde)
+      let rangos = [
+        [ [0, 120, 70], [10, 255, 255] ],   // rojo
+        [ [90, 50, 70], [128, 255, 255] ], // azul
+        [ [36, 50, 70], [89, 255, 255] ]   // verde
+      ];
+
+      for (let r of rangos) {
+        let low = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), r[0]);
+        let high = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), r[1]);
+        let mask = new cv.Mat();
+        cv.inRange(hsv, low, high, mask);
+
+        let contours = new cv.MatVector();
+        let hierarchy = new cv.Mat();
+        cv.findContours(mask, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
+
+        for (let i = 0; i < contours.size(); ++i) {
+          let rect = cv.boundingRect(contours.get(i));
+          if (rect.width * rect.height > 5000) {
+            console.log("Teléfono detectado:", rect);
+            socket.emit("telefonoDetectado", {}); // avisar al server
+          }
+        }
+
+        mask.delete(); low.delete(); high.delete();
+        contours.delete(); hierarchy.delete();
+      }
+
+      src.delete(); hsv.delete();
+      requestAnimationFrame(procesarFrame);
+    }
+
+    let video = document.getElementById("video");
+    setTimeout(() => procesarFrame(), 2000);
+
+    // Botón ola
+    function lanzarOla() {
+      socket.emit("control", { accion: "ola" });
+    }
+  </script>
+</body>
+</html>
