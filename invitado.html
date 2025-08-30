@@ -8,42 +8,63 @@
       margin: 0; padding: 0;
       height: 100%; width: 100%;
       background: black;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 20px;
     }
   </style>
 </head>
 <body>
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-<script>
-  const socket = io("http://192.168.1.100:3000"); // ⚠️ Cambia por la IP de tu PC
+  <div id="status">Esperando instrucciones...</div>
 
-  // 🌊 Ola secuencial sincronizada
-  socket.on("ola", (data) => {
-    const now = Date.now();
-    const wait = data.startAt - now + data.delay;
-    setTimeout(() => {
-      document.body.style.backgroundColor = "blue";
-      setTimeout(() => document.body.style.backgroundColor = "black", 500);
-    }, wait);
-  });
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const statusDiv = document.getElementById("status");
 
-  // 💡 Encender todos sincronizados
-  socket.on("todos", (data) => {
-    const now = Date.now();
-    const wait = data.startAt - now;
-    setTimeout(() => {
-      document.body.style.backgroundColor = "blue";
-      setTimeout(() => document.body.style.backgroundColor = "black", 1000);
-    }, wait);
-  });
+    socket.on("connect", () => {
+      statusDiv.textContent = "🔌 Conectado como invitado: " + socket.id;
+    });
 
-  // 🖼 Mostrar imagen
-  socket.on("imagen", (data) => {
-    // cada invitado recibe un color aleatorio de la imagen como ejemplo
-    const colores = ["red", "green", "blue", "yellow"];
-    const color = colores[Math.floor(Math.random() * colores.length)];
-    document.body.style.backgroundColor = color;
-    console.log("🖼 Mostrando color:", color);
-  });
-</script>
+    // 🌊 Ola
+    socket.on("ola", (data) => {
+      statusDiv.textContent = "🌊 OLA!";
+      const now = Date.now();
+      const wait = data.startAt - now + data.delay;
+      setTimeout(() => {
+        document.body.style.backgroundColor = "blue";
+        setTimeout(() => {
+          document.body.style.backgroundColor = "black";
+          statusDiv.textContent = "Esperando...";
+        }, 500);
+      }, wait);
+    });
+
+    // 💡 Encender todos
+    socket.on("todos", (data) => {
+      statusDiv.textContent = "💡 TODOS!";
+      const now = Date.now();
+      const wait = data.startAt - now;
+      setTimeout(() => {
+        document.body.style.backgroundColor = "blue";
+        setTimeout(() => {
+          document.body.style.backgroundColor = "black";
+          statusDiv.textContent = "Esperando...";
+        }, 1000);
+      }, wait);
+    });
+
+    // 🖼 Imagen
+    socket.on("imagen", (data) => {
+      statusDiv.textContent = "🖼 Imagen!";
+      const colores = ["red", "green", "blue", "yellow"];
+      const color = colores[Math.floor(Math.random() * colores.length)];
+      document.body.style.backgroundColor = color;
+    });
+  </script>
 </body>
 </html>
