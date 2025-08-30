@@ -21,49 +21,47 @@
 <body>
   <div id="status">Esperando instrucciones...</div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-database.js";
+
+    // ⚠️ Usa las mismas credenciales de Firebase que en creador.html
+    const firebaseConfig = {
+      apiKey: "TU_API_KEY",
+      authDomain: "TU_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://TU_PROJECT_ID.firebaseio.com",
+      projectId: "TU_PROJECT_ID",
+      storageBucket: "TU_PROJECT_ID.appspot.com",
+      messagingSenderId: "TU_SENDER_ID",
+      appId: "TU_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
     const statusDiv = document.getElementById("status");
 
-    socket.on("connect", () => {
-      statusDiv.textContent = "🔌 Conectado como invitado: " + socket.id;
-    });
+    onValue(ref(db, "comando"), (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
 
-    // 🌊 Ola
-    socket.on("ola", (data) => {
-      statusDiv.textContent = "🌊 OLA!";
-      const now = Date.now();
-      const wait = data.startAt - now + data.delay;
-      setTimeout(() => {
+      if (data.accion === "ola") {
+        statusDiv.textContent = "🌊 OLA!";
         document.body.style.backgroundColor = "blue";
         setTimeout(() => {
           document.body.style.backgroundColor = "black";
           statusDiv.textContent = "Esperando...";
         }, 500);
-      }, wait);
-    });
+      }
 
-    // 💡 Encender todos
-    socket.on("todos", (data) => {
-      statusDiv.textContent = "💡 TODOS!";
-      const now = Date.now();
-      const wait = data.startAt - now;
-      setTimeout(() => {
-        document.body.style.backgroundColor = "blue";
+      if (data.accion === "todos") {
+        statusDiv.textContent = "💡 TODOS!";
+        document.body.style.backgroundColor = "green";
         setTimeout(() => {
           document.body.style.backgroundColor = "black";
           statusDiv.textContent = "Esperando...";
         }, 1000);
-      }, wait);
-    });
-
-    // 🖼 Imagen
-    socket.on("imagen", (data) => {
-      statusDiv.textContent = "🖼 Imagen!";
-      const colores = ["red", "green", "blue", "yellow"];
-      const color = colores[Math.floor(Math.random() * colores.length)];
-      document.body.style.backgroundColor = color;
+      }
     });
   </script>
 </body>
