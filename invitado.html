@@ -26,7 +26,6 @@
         const res = await fetch("/api/comando");
         const data = await res.json();
 
-        // Solo ejecutar si es nuevo
         if (data.time > lastTime) {
           lastTime = data.time;
 
@@ -47,13 +46,17 @@
               statusDiv.textContent = "Esperando...";
             }, 1000);
           }
+
+          if (data.accion === "apagar") {
+            statusDiv.textContent = "🛑 APAGADO!";
+            document.body.style.background = "black";
+          }
         }
       } catch (e) {
         console.error("Error consultando comando", e);
       }
     }
 
-    // Pregunta cada segundo
     setInterval(checkComando, 1000);
   </script>
 </body>
