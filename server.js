@@ -2,6 +2,7 @@ const io = require("socket.io")(3000, {
   cors: { origin: "*" }
 });
 
+// Listas de invitados
 let invitados = [];
 let invitadosDetectados = [];
 
@@ -9,33 +10,32 @@ io.on("connection", (socket) => {
   console.log("🔌 Conectado:", socket.id);
   invitados.push(socket);
 
-  // Acciones que puede mandar el creador
-  socket.on("control", (data) => {
-    if (data.accion === "detectar") {
-      console.log("📡 Detectando invitados...");
-      invitados.forEach(cli => {
-        cli.emit("detectar");
-        if (!invitadosDetectados.includes(cli)) {
-          invitadosDetectados.push(cli);
-        }
-      });
-      console.log(`✅ Invitados detectados: ${invitadosDetectados.length}`);
-    }
+  // 👉 Cuando el creador detecta un teléfono con la cámara
+  socket.on("telefonoDetectado", () => {
+    console.log("📱 Teléfono detectado por la cámara");
+    // ⚠️ Por ahora apagamos a todos los invitados que parpadean
+    invitados.forEach(cli => cli.emit("detectar"));
+    // Ahora todos los invitados se marcan como detectados (activos)
+    invitadosDetectados = [...invitados];
+    console.log(`✅ Invitados detectados: ${invitadosDetectados.length}`);
+  });
 
+  // 👉 Control manual desde los botones del creador
+  socket.on("control", (data) => {
     if (data.accion === "ola") {
-      console.log("🌊 Lanzando ola...");
+      console.log("🌊 Ola lanzada");
       invitadosDetectados.forEach((cli, i) => {
         cli.emit("ola", { delay: i * 500 });
       });
     }
 
     if (data.accion === "todos") {
-      console.log("💡 Encendiendo todos...");
+      console.log("💡 Encender todos");
       invitadosDetectados.forEach(cli => cli.emit("todos"));
     }
   });
 
-  // Cuando un invitado se desconecta
+  // 👉 Cuando un invitado se desconecta
   socket.on("disconnect", () => {
     console.log("❌ Desconectado:", socket.id);
     invitados = invitados.filter(c => c.id !== socket.id);
@@ -43,4 +43,3 @@ io.on("connection", (socket) => {
     console.log(`👥 Conectados: ${invitados.length}, Activos: ${invitadosDetectados.length}`);
   });
 });
-
