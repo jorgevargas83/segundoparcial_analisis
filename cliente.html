@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Olas Live — Cliente</title>
+  <style>
+    html, body { height: 100%; }
+    body { margin: 0; font-family: system-ui, sans-serif; background:#000; color:#fff; }
+    .panel { padding: 14px; position: relative; z-index: 2; }       /* 👈 panel encima */
+    fieldset { border: 1px solid #333; border-radius: 12px; padding: 10px 14px; margin: 12px; }
+    legend { padding: 0 8px; font-weight: 600; }
+    label { display:block; margin: 8px 0 4px; font-size: 14px; }
+    input, button { font: inherit; padding: 8px 10px; border-radius: 10px; border: 1px solid #555; background:#111; color:#fff; }
+    button { cursor: pointer; }
+    .screen { position: fixed; inset: 0; display: none;              /* 👈 oculta al inicio */
+              place-items: center; background:#000; filter: brightness(1); z-index: 1; }
+    .hint { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 12px; color:#aaa; z-index: 2; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="panel">
+    <fieldset>
+      <legend>Conexión</legend>
+      <label>Event ID</label>
+      <input id="eventId" placeholder="FIESTA-2025" />
+      <label>Grupo (opcional)</label>
+      <input id="group" placeholder="p. ej. NORTE" />
+      <div style="margin-top:8px">
+        <button id="connectBtn">Unirme</button>
+        <button id="disconnectBtn" disabled>Salir</button>
+        <button id="fsBtn">Pantalla completa</button>
+        <button id="wakelockBtn">Mantener encendida</button>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Mi posición en la cuadrícula</legend>
+      <label>Ancho total W</label>
+      <input id="gridW" type="number" value="60" min="4" max="200" />
+      <label>Alto total H</label>
+      <input id="gridH" type="number" value="30" min="4" max="120" />
+      <label>Mi X (columna 0..W-1)</label>
+      <input id="posX" type="number" value="0" min="0" />
+      <label>Mi Y (fila 0..H-1)</label>
+      <input id="posY" type="number" value="0" min="0" />
+    </fieldset>
+
+    <fieldset>
+      <legend>Prueba local</legend>
+      <button id="testGreen">Prender verde</button>
+      <button id="testOff">Apagar</button>
+    </fieldset>
+  </div>
+
+  <div id="screen" class="screen"><span style="opacity:.15">Olas Live</span></div>
+  <div class="hint">Súbele al brillo · No cierres la pestaña</div>
+
+  <script>
+    // 👉 RELLENAR con tu proyecto
+    const SUPABASE_URL = "https://diubizleswmcepymbcnn.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpdWJpemxlc3dtY2VweW1iY25uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NjgxOTMsImV4cCI6MjA3MjE0NDE5M30.itQ7bN17domEIb0QgM0x9QRHVE8rF-Xi-HGgJUTiRdE";
+
+    const { createClient } = window.supabase;
+    const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const el = (id) => document.getElementById(id);
+    const UI = {
+      eventId: el('eventId'),
+      group: el('group'),
+      gridW: el('gridW'),
+      gridH: el('gridH'),
+      posX: el('posX'),
+      posY: el('posY'),
+      connectBtn: el('connectBtn'),
+      disconnectBtn: el('disconnectBtn'),
+      fsBtn: el('fsBtn'),
+      wakelockBtn: el('wakelockBtn'),
+      testGreen: el('testGreen'),
+      testOff: el('testOff'),
+      screen: el('screen'),
+    };
+
+    let channel = null;
+    let wakeLock = null;
+    let anim = { running: false, type: 'off', config: null };
+    let lastFrame = 0;
+
+    const myKey = 'u-' + Math.random().toString(36).slice(2);
+
+    function clamp01(v){ return Math.max(0, Math.min(1, v)); }
+    function setBg(c) { UI.screen.style.background = c; }
+    function setIntensity(a) { UI.screen.style.filter = `brightness(${clamp01(a)})`; }
+
+    function showScreen(visible){
+      UI.screen.style.display = visible ? 'grid' : 'none';
+    }
+
+    async function requestWakeLock(){
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await navigator.wakeLock.request('screen');
+          UI.wakelockBtn.textContent = 'WakeLock activo';
+          wakeLock.addEventListener('release', () => {
+            UI.wakelockBtn.textContent = 'Mantener encendida';
+          });
+        } else {
+          alert('Wake Lock no soportado en este navegador');
+        }
+      } catch(e){ console.warn(e); }
+    }
+
+    async function goFullscreen(){
+      try { await document.documentElement.requestFullscreen(); } catch(e){ console.warn(e); }
+      showScreen(true); // 👈 al entrar a fullscreen, ya muestra la pantalla
+    }
+
+    async function connect(){
+      const id = (UI.eventId.value || '').trim();
+      if(!id) return alert('Ingresa Event ID');
+      const group = (UI.group.value || '').trim() || null;
+
+      channel = sb.channel(`event:${id}`, {
+        config: { broadcast: { ack: false }, presence: { key: myKey } }
+      });
+
+      channel.on('broadcast', { event:'cmd' }, ({ payload }) => {
+        const { type, targetGroup, startAt, payload: data } = payload || {};
+        if (targetGroup && targetGroup !== group) return; // filtrado por grupo
+        if (type === 'stop') return stopEffect();
+        if (type === 'effect') return startEffect(data, startAt);
+        if (type === 'mosaic') return showMosaic(data, startAt);
+      });
+
+      channel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          trackPresence();
+          UI.connectBtn.disabled = true;
+          UI.disconnectBtn.disabled = false;
+          // no mostramos la pantalla aún; el usuario puede seguir viendo el panel
+        }
+      });
+    }
+
+    async function disconnect(){
+      if(channel){ await channel.unsubscribe(); channel=null; }
+      UI.connectBtn.disabled = false;
+      UI.disconnectBtn.disabled = true;
+      stopEffect();
+      showScreen(false);
+    }
+
+    function trackPresence(){
+      if(!channel) return;
+      const meta = {
+        role: 'user',
+        x: Number(UI.posX.value)||0,
+        y: Number(UI.posY.value)||0,
+        W: Number(UI.gridW.value)||60,
+        H: Number(UI.gridH.value)||30,
+        group: (UI.group.value||'')||null,
+        t: Date.now(),
+      };
+      channel.track(meta);
+    }
+
+    // --- Efectos ---
+    function stopEffect(){
+      anim.running = false;
+      anim.type = 'off';
+      setBg('#000');
+      setIntensity(1);
+      // dejamos la pantalla visible si ya estaba; puedes ocultarla si prefieres:
+      // showScreen(false);
+    }
+
+    function startEffect(cfg, startAt){
+      const now = Date.now();
+      const delay = startAt ? Math.max(0, startAt - now) : 0;
+      setTimeout(() => {
+        anim.config = cfg || {};
+        anim.type = cfg.effect || 'solid';
+        anim.running = true;
+        lastFrame = performance.now();
+        showScreen(true);        // 👈 se asegura de mostrar la pantalla al arrancar
+        requestAnimationFrame(loop);
+      }, delay);
+    }
+
+    function loop(ts){
+      if(!anim.running) return;
+      const cfg = anim.config || {};
+      const intensity = clamp01(Number(cfg.intensity) || 1);
+      setIntensity(intensity);
+
+      const [A,B] = cfg.colors || ['#ffffff', '#000000'];
+      const speed = Math.max(50, Number(cfg.speedMs) || 500);
+      const t = ts / speed;
+
+      const x = Number(UI.posX.value)||0;
+      const y = Number(UI.posY.value)||0;
+
+      switch(anim.type){
+        case 'solid': {
+          setBg(A);
+          break;
+        }
+        case 'blink': {
+          const on = ((t|0) % 2) === 0;
+          setBg(on ? A : B);
+          break;
+        }
+        case 'wave': {
+          const phase = (x + y);               // ola diagonal simple
+          const v = Math.sin(t - phase * 0.5);
+          const on = v > 0;
+          setBg(on ? A : B);
+          break;
+        }
+        case 'gradient': {
+          const p = (Math.sin(t*0.5)+1)/2; // 0..1
+          setBg(`linear-gradient(135deg, ${A} 0%, ${A} ${Math.round(p*100)}%, ${B} ${Math.round(p*100)}%, ${B} 100%)`);
+          break;
+        }
+        default: setBg('#000');
+      }
+      requestAnimationFrame(loop);
+    }
+
+    // --- Mosaico ---
+    async function showMosaic(data, startAt){
+      const { width, height, imageDataUrl, intensity } = data || {};
+      const W = Math.max(1, Number(UI.gridW.value)||60);
+      const H = Math.max(1, Number(UI.gridH.value)||30);
+      const x = Math.max(0, Math.min(W-1, Number(UI.posX.value)||0));
+      const y = Math.max(0, Math.min(H-1, Number(UI.posY.value)||0));
+
+      const now = Date.now();
+      const delay = startAt ? Math.max(0, startAt - now) : 0;
+
+      const img = new Image();
+      img.src = imageDataUrl;
+      await img.decode();
+
+      setTimeout(() => {
+        const cnv = document.createElement('canvas');
+        cnv.width = width; cnv.height = height;
+        const ctx = cnv.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, width, height);
+        const px = ctx.getImageData(x, y, 1, 1).data; // [r,g,b,a]
+        const color = `rgb(${px[0]}, ${px[1]}, ${px[2]})`;
+        setBg(color);
+        setIntensity(clamp01(Number(intensity)||1));
+        showScreen(true);      // 👈 asegúrate de verla en mosaico
+        anim.running = false;  // modo estático
+      }, delay);
+    }
+
+    // UI events
+    UI.connectBtn.addEventListener('click', connect);
+    UI.disconnectBtn.addEventListener('click', disconnect);
+    UI.fsBtn.addEventListener('click', goFullscreen);
+    UI.wakelockBtn.addEventListener('click', requestWakeLock);
+    UI.gridW.addEventListener('change', trackPresence);
+    UI.gridH.addEventListener('change', trackPresence);
+    UI.posX.addEventListener('change', trackPresence);
+    UI.posY.addEventListener('change', trackPresence);
+    UI.group.addEventListener('change', trackPresence);
+
+    UI.testGreen.addEventListener('click', () => { setBg('#00ff66'); setIntensity(1); showScreen(true); });
+    UI.testOff.addEventListener('click', () => { setBg('#000'); setIntensity(1); showScreen(true); });
+  </script>
+</body>
+</html>
