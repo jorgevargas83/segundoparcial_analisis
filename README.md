@@ -1,1 +1,0 @@
-# segundoparcial_analisis
