@@ -26,20 +26,30 @@
   <button class="todos" onclick="encenderTodos()">💡 Encender todos</button>
   <button class="imagen" onclick="mostrarImagen()">🖼 Mostrar imagen</button>
 
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <pre id="log"></pre>
+
+  <script src="/socket.io/socket.io.js"></script>
   <script>
-    const socket = io("http://192.168.1.100:3000"); // ⚠️ Cambia por la IP de tu PC
+    const socket = io();
+
+    const log = (msg) => {
+      document.getElementById("log").textContent += msg + "\n";
+    };
+
+    socket.on("connect", () => log("🔌 Conectado como creador: " + socket.id));
 
     function lanzarOla() {
+      log("🌊 Enviando ola...");
       socket.emit("control", { accion: "ola" });
     }
 
     function encenderTodos() {
+      log("💡 Enviando encender todos...");
       socket.emit("control", { accion: "todos" });
     }
 
     function mostrarImagen() {
-      // Ejemplo: una mini imagen de 2x2
+      log("🖼 Enviando imagen...");
       const imagen = [
         ["red", "blue"],
         ["green", "yellow"]
