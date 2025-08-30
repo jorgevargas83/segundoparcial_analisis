@@ -16,23 +16,27 @@
 <body>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
-  const socket = io("http://192.168.1.100:3000"); // ⚠️ cambia la IP por la de tu PC
+  const socket = io("http://192.168.1.100:3000"); // ⚠️ cambia a la IP de tu PC
 
-  // 🔄 Parpadeo inicial blanco/negro para ser detectado
+  // 🔄 Parpadeo inicial
   let parpadeo = setInterval(() => {
     document.body.style.backgroundColor =
       document.body.style.backgroundColor === "black" ? "white" : "black";
   }, 500);
 
-  // 📱 Cuando el servidor confirma detección → se apaga
+  let activo = false;
+
+  // 📡 Cuando el servidor confirma detección
   socket.on("detectar", () => {
     clearInterval(parpadeo);
     document.body.style.backgroundColor = "black";
-    console.log("✅ Teléfono detectado, pasa a modo activo");
+    activo = true;
+    console.log("✅ Detectado: parpadeo apagado, esperando instrucciones...");
   });
 
-  // 🌊 Cuando el creador lanza la ola → se enciende secuencialmente
+  // 🌊 Ola secuencial
   socket.on("ola", (data) => {
+    if (!activo) return;
     setTimeout(() => {
       document.body.style.backgroundColor = "blue";
       setTimeout(() => {
@@ -40,7 +44,15 @@
       }, 500);
     }, data.delay);
   });
+
+  // 💡 Encender todos al mismo tiempo
+  socket.on("todos", () => {
+    if (!activo) return;
+    document.body.style.backgroundColor = "blue";
+    setTimeout(() => {
+      document.body.style.backgroundColor = "black";
+    }, 1000);
+  });
 </script>
 </body>
 </html>
-
