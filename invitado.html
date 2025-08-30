@@ -5,10 +5,8 @@
   <title>Invitado</title>
   <style>
     html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      width: 100%;
+      margin: 0; padding: 0;
+      height: 100%; width: 100%;
       background: black;
     }
   </style>
@@ -16,50 +14,35 @@
 <body>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
-  const socket = io("http://192.168.1.100:3000"); // ⚠️ cambia a la IP de tu PC
+  const socket = io("http://192.168.1.100:3000"); // ⚠️ Cambia por la IP de tu PC
 
-  // 🔄 Parpadeo inicial
-  let parpadeo = setInterval(() => {
-    document.body.style.backgroundColor =
-      document.body.style.backgroundColor === "black" ? "white" : "black";
-  }, 500);
-
-  let activo = false;
-
-  // 📡 Cuando el servidor confirma detección
-  socket.on("detectar", () => {
-    clearInterval(parpadeo);
-    document.body.style.backgroundColor = "black";
-    activo = true;
-    console.log("✅ Detectado: parpadeo apagado, esperando órdenes...");
-  });
-
-  // 🌊 Ola secuencial
+  // 🌊 Ola secuencial sincronizada
   socket.on("ola", (data) => {
-    if (!activo) {
-      console.log("⚠️ Ignorando ola: aún no estoy detectado");
-      return;
-    }
+    const now = Date.now();
+    const wait = data.startAt - now + data.delay;
     setTimeout(() => {
       document.body.style.backgroundColor = "blue";
-      console.log("🌊 Ola activada");
-      setTimeout(() => {
-        document.body.style.backgroundColor = "black";
-      }, 500);
-    }, data.delay);
+      setTimeout(() => document.body.style.backgroundColor = "black", 500);
+    }, wait);
   });
 
-  // 💡 Encender todos
-  socket.on("todos", () => {
-    if (!activo) {
-      console.log("⚠️ Ignorando encender todos: aún no estoy detectado");
-      return;
-    }
-    document.body.style.backgroundColor = "blue";
-    console.log("💡 Encendido con todos");
+  // 💡 Encender todos sincronizados
+  socket.on("todos", (data) => {
+    const now = Date.now();
+    const wait = data.startAt - now;
     setTimeout(() => {
-      document.body.style.backgroundColor = "black";
-    }, 1000);
+      document.body.style.backgroundColor = "blue";
+      setTimeout(() => document.body.style.backgroundColor = "black", 1000);
+    }, wait);
+  });
+
+  // 🖼 Mostrar imagen
+  socket.on("imagen", (data) => {
+    // cada invitado recibe un color aleatorio de la imagen como ejemplo
+    const colores = ["red", "green", "blue", "yellow"];
+    const color = colores[Math.floor(Math.random() * colores.length)];
+    document.body.style.backgroundColor = color;
+    console.log("🖼 Mostrando color:", color);
   });
 </script>
 </body>
