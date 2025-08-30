@@ -16,24 +16,22 @@
 <body>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
-  const socket = io("http://192.168.1.100:3000"); // cambia la IP
+  const socket = io("http://192.168.1.100:3000"); // ⚠️ cambia la IP por la de tu PC
 
-  // Parpadeo inicial
-  let colores = ["red", "blue", "green"];
-  let i = 0;
+  // 🔄 Parpadeo inicial blanco/negro para ser detectado
   let parpadeo = setInterval(() => {
-    document.body.style.backgroundColor = colores[i % colores.length];
-    i++;
+    document.body.style.backgroundColor =
+      document.body.style.backgroundColor === "black" ? "white" : "black";
   }, 500);
 
-  // Cuando el servidor dice que fue detectado
+  // 📱 Cuando el servidor confirma detección → se apaga
   socket.on("detectar", () => {
     clearInterval(parpadeo);
     document.body.style.backgroundColor = "black";
-    console.log("Teléfono detectado, pasa a modo activo");
+    console.log("✅ Teléfono detectado, pasa a modo activo");
   });
 
-  // Cuando se lanza la ola
+  // 🌊 Cuando el creador lanza la ola → se enciende secuencialmente
   socket.on("ola", (data) => {
     setTimeout(() => {
       document.body.style.backgroundColor = "blue";
@@ -45,3 +43,4 @@
 </script>
 </body>
 </html>
+
