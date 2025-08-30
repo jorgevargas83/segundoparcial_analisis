@@ -9,28 +9,44 @@
       height: 100%; width: 100%;
       background: black; color: white;
       font-family: Arial, sans-serif;
-      display: flex; justify-content: center; align-items: center;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
       font-size: 20px;
+    }
+    #log {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #0f0;
+      max-height: 200px;
+      overflow-y: auto;
     }
   </style>
 </head>
 <body>
   <div id="status">Esperando...</div>
+  <pre id="log"></pre>
 
   <script>
     const statusDiv = document.getElementById("status");
+    const logDiv = document.getElementById("log");
     let lastTime = 0;
+
+    function log(msg) {
+      logDiv.textContent += msg + "\n";
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
 
     async function checkComando() {
       try {
         const res = await fetch("/api/comando");
         const data = await res.json();
+        log("Respuesta API: " + JSON.stringify(data));
 
         if (data.time > lastTime) {
           lastTime = data.time;
+          statusDiv.textContent = "Comando: " + data.accion;
 
           if (data.accion === "ola") {
-            statusDiv.textContent = "🌊 OLA!";
             document.body.style.background = "blue";
             setTimeout(() => {
               document.body.style.background = "black";
@@ -39,7 +55,6 @@
           }
 
           if (data.accion === "todos") {
-            statusDiv.textContent = "💡 TODOS!";
             document.body.style.background = "yellow";
             setTimeout(() => {
               document.body.style.background = "black";
@@ -48,19 +63,15 @@
           }
 
           if (data.accion === "apagar") {
-            statusDiv.textContent = "🛑 APAGADO!";
             document.body.style.background = "black";
           }
         }
       } catch (e) {
-        console.error("Error consultando comando", e);
+        log("❌ Error: " + e);
       }
     }
 
-    // Revisa la API cada segundo
-    setInterval(checkComando, 1000);
+    setInterval(checkComando, 2000); // cada 2 segundos
   </script>
 </body>
 </html>
-
-
