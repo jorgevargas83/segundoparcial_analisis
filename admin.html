@@ -4,116 +4,150 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Olas Live — Admin</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 16px; }
-    fieldset { border: 1px solid #ddd; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; }
-    legend { padding: 0 8px; font-weight: 600; }
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    body{
+      margin:0; font-family: system-ui, sans-serif;
+      background: url('fondo.png') center/cover fixed no-repeat;
+      min-height:100dvh; color:#0c1b25;
+    }
+    .topbar{
+      display:flex; align-items:center; gap:12px;
+      padding:10px 16px; background:#0bbbe6; color:#003244;
+      box-shadow: 0 2px 10px rgba(0,0,0,.15); position:sticky; top:0; z-index:10;
+    }
+    .logo{ height:36px; width:auto; display:block; }
+    .brand{ font-weight:800; font-size:20px; letter-spacing:.3px; }
+    .nav{ margin-left:auto; display:flex; gap:8px; }
+    .btn{
+      appearance:none; border:0; cursor:pointer;
+      background:#ffffffdd; color:#003244; font-weight:600;
+      padding:8px 12px; border-radius:10px; text-decoration:none;
+    }
+    .container{ padding:22px; max-width:1100px; margin:auto; }
+    fieldset {
+      background: rgba(255,255,255,.88);
+      border: 1px solid rgba(0,0,0,.06);
+      border-radius: 14px; padding: 12px 16px; margin-bottom: 16px;
+      backdrop-filter: saturate(120%) blur(2px);
+    }
+    legend { padding: 0 8px; font-weight: 700; }
     label { display:block; margin: 8px 0 4px; font-size: 14px; }
     input, select, button { font: inherit; padding: 8px 10px; border-radius: 10px; border: 1px solid #ccc; }
     button { cursor: pointer; }
     .row { display:flex; gap:12px; flex-wrap: wrap; align-items: end; }
-    .muted { color: #666; font-size: 12px; }
-    .ok { color: #0a6; font-weight: 600; }
-    .bad { color: #b00; font-weight: 600; }
+    .muted { color: #294655; font-size: 12px; }
+    .ok { color: #0a6; font-weight: 700; }
+    .bad { color: #b00; font-weight: 700; }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <h1>Olas Live — <small>Panel de Administración</small></h1>
+  <header class="topbar">
+    <img src="umg.png" alt="UMG" class="logo">
+    <div class="brand">Olas Live — Admin</div>
+    <nav class="nav">
+      <a class="btn" href="index.html">Inicio</a>
+      <a class="btn" href="admin.html">Admin</a>
+      <a class="btn" href="cliente.html">Cliente</a>
+    </nav>
+  </header>
 
-  <fieldset>
-    <legend>Evento</legend>
-    <div class="row">
-      <div>
-        <label>Event ID</label>
-        <input id="eventId" placeholder="p.ej. FIESTA-2025" />
+  <main class="container">
+    <fieldset>
+      <legend>Evento</legend>
+      <div class="row">
+        <div>
+          <label>Event ID</label>
+          <input id="eventId" placeholder="p.ej. FIESTA-2025" />
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button id="connectBtn">Conectar</button>
+          <button id="disconnectBtn" disabled>Desconectar</button>
+        </div>
       </div>
-      <div>
-        <label>&nbsp;</label>
-        <button id="connectBtn">Conectar</button>
-        <button id="disconnectBtn" disabled>Desconectar</button>
+      <div style="margin-top:8px" class="muted">
+        Estado: <span id="status" class="bad">Desconectado</span> · Conectados: <span id="count">0</span>
       </div>
-    </div>
-    <div style="margin-top:8px" class="muted">
-      Estado: <span id="status">Desconectado</span> · Conectados: <span id="count">0</span>
-    </div>
-  </fieldset>
+    </fieldset>
 
-  <fieldset>
-    <legend>Efectos</legend>
-    <div class="row">
-      <div>
-        <label>Efecto</label>
-        <select id="effect">
-          <option value="solid">Color sólido</option>
-          <option value="blink">Parpadeo</option>
-          <option value="wave">Ola</option>
-          <option value="gradient">Gradiente</option>
-        </select>
+    <fieldset>
+      <legend>Efectos</legend>
+      <div class="row">
+        <div>
+          <label>Efecto</label>
+          <select id="effect">
+            <option value="solid">Color sólido</option>
+            <option value="blink">Parpadeo</option>
+            <option value="wave">Ola</option>
+            <option value="gradient">Gradiente</option>
+          </select>
+        </div>
+        <div>
+          <label>Color A</label>
+          <input id="colorA" type="color" value="#00ff88" />
+        </div>
+        <div>
+          <label>Color B (algunos efectos)</label>
+          <input id="colorB" type="color" value="#002244" />
+        </div>
+        <div>
+          <label>Velocidad (ms)</label>
+          <input id="speed" type="number" value="500" min="50" step="10" />
+        </div>
+        <div>
+          <label>Intensidad (0.1–1.0)</label>
+          <input id="intensity" type="number" value="1" min="0.1" max="1" step="0.1" />
+        </div>
+        <div>
+          <label>Grupo (opcional)</label>
+          <input id="targetGroup" placeholder="TODOS si vacío" />
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button id="startBtn">Iniciar (1s)</button>
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button id="stopBtn">Detener</button>
+        </div>
       </div>
-      <div>
-        <label>Color A</label>
-        <input id="colorA" type="color" value="#00ff88" />
-      </div>
-      <div>
-        <label>Color B (algunos efectos)</label>
-        <input id="colorB" type="color" value="#002244" />
-      </div>
-      <div>
-        <label>Velocidad (ms)</label>
-        <input id="speed" type="number" value="500" min="50" step="10" />
-      </div>
-      <div>
-        <label>Intensidad (0.1–1.0)</label>
-        <input id="intensity" type="number" value="1" min="0.1" max="1" step="0.1" />
-      </div>
-      <div>
-        <label>Grupo (opcional)</label>
-        <input id="targetGroup" placeholder="TODOS si vacío" />
-      </div>
-      <div>
-        <label>&nbsp;</label>
-        <button id="startBtn">Iniciar (1s)</button>
-      </div>
-      <div>
-        <label>&nbsp;</label>
-        <button id="stopBtn">Detener</button>
-      </div>
-    </div>
-  </fieldset>
+    </fieldset>
 
-  <fieldset>
-    <legend>Mosaico (imagen → cuadrícula)</legend>
-    <div class="row">
-      <div>
-        <label>Imagen</label>
-        <input id="imageFile" type="file" accept="image/*" />
+    <fieldset>
+      <legend>Mosaico (imagen → cuadrícula)</legend>
+      <div class="row">
+        <div>
+          <label>Imagen</label>
+          <input id="imageFile" type="file" accept="image/*" />
+        </div>
+        <div>
+          <label>Ancho (W)</label>
+          <input id="gridW" type="number" value="60" min="4" max="200" />
+        </div>
+        <div>
+          <label>Alto (H)</label>
+          <input id="gridH" type="number" value="30" min="4" max="120" />
+        </div>
+        <div>
+          <label>Intensidad (0.1–1.0)</label>
+          <input id="mosaicIntensity" type="number" value="1" min="0.1" max="1" step="0.1" />
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button id="sendMosaicBtn">Enviar mosaico</button>
+        </div>
       </div>
-      <div>
-        <label>Ancho (W)</label>
-        <input id="gridW" type="number" value="60" min="4" max="200" />
-      </div>
-      <div>
-        <label>Alto (H)</label>
-        <input id="gridH" type="number" value="30" min="4" max="120" />
-      </div>
-      <div>
-        <label>Intensidad (0.1–1.0)</label>
-        <input id="mosaicIntensity" type="number" value="1" min="0.1" max="1" step="0.1" />
-      </div>
-      <div>
-        <label>&nbsp;</label>
-        <button id="sendMosaicBtn">Enviar mosaico</button>
-      </div>
-    </div>
-    <div class="muted">Consejo: Elige W×H similar a filas×columnas del recinto. La imagen se reescala.</div>
-  </fieldset>
+      <div class="muted">Consejo: Elige W×H similar a filas×columnas del recinto. La imagen se reescala.</div>
+    </fieldset>
+  </main>
 
   <script>
-    // 👉 RELLENAR con tu proyecto
-    const SUPABASE_URL = "https://jnwqnflkuewbylbaeryc.supabase.co";
+    // Supabase (igual que antes)
+    const SUPABASE_URL = "https://jnwqnflkuewbylbaeryc.supabase.co/";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impud3FuZmxrdWV3YnlsYmFlcnljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTczODY2NzIsImV4cCI6MjA3Mjk2MjY3Mn0.lw0ClyoR_SR1scUcWbLGEmk76LTf3KLbcCB1E1s1kh0";
-
     const { createClient } = window.supabase;
     const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -140,23 +174,23 @@
 
     let channel = null;
     const adminKey = 'admin-' + Math.random().toString(36).slice(2);
+    els.eventId.value = localStorage.getItem('olas:eventId') || '';
 
     function setUiConnected(connected) {
       els.connectBtn.disabled = connected;
       els.disconnectBtn.disabled = !connected;
       els.status.textContent = connected ? 'Conectado' : 'Desconectado';
       els.status.className = connected ? 'ok' : 'bad';
+      if (!connected) els.count.textContent = '0';
     }
 
     async function connect() {
       const id = (els.eventId.value || '').trim();
       if (!id) return alert('Ingresa un Event ID');
+      localStorage.setItem('olas:eventId', id);
 
       channel = sb.channel(`event:${id}`, {
-        config: {
-          broadcast: { ack: true },
-          presence: { key: adminKey }
-        }
+        config: { broadcast: { ack: true }, presence: { key: adminKey } }
       });
 
       channel.on('presence', { event: 'sync' }, () => {
@@ -175,10 +209,7 @@
     }
 
     async function disconnect() {
-      if (channel) {
-        await channel.unsubscribe();
-        channel = null;
-      }
+      if (channel) { await channel.unsubscribe(); channel = null; }
       setUiConnected(false);
     }
 
@@ -195,11 +226,9 @@
       if (!channel) return alert('Conéctate primero');
       const startAt = start ? Date.now() + 1000 : undefined;
       const targetGroup = (els.targetGroup.value || '').trim() || null;
-      const payload = payloadEffect();
       await channel.send({
-        type: 'broadcast',
-        event: 'cmd',
-        payload: { type: 'effect', startAt, targetGroup, payload }
+        type: 'broadcast', event: 'cmd',
+        payload: { type: 'effect', startAt, targetGroup, payload: payloadEffect() }
       });
     }
 
@@ -209,7 +238,6 @@
       await channel.send({ type:'broadcast', event:'cmd', payload: { type:'stop', targetGroup } });
     }
 
-    // Mosaico: redimensionar imagen a W×H y enviar como dataURL
     async function sendMosaic() {
       if (!channel) return alert('Conéctate primero');
       const file = els.imageFile.files?.[0];
@@ -217,8 +245,18 @@
       const W = Math.max(4, Number(els.gridW.value) || 60);
       const H = Math.max(4, Number(els.gridH.value) || 30);
       const intensity = Math.min(1, Math.max(0.1, Number(els.mosaicIntensity.value) || 1));
+      const targetGroup = (els.targetGroup.value || '').trim() || null;
 
-      const bitmap = await createImageBitmap(file);
+      let bitmap;
+      try { bitmap = await createImageBitmap(file); }
+      catch {
+        const img = new Image(); img.src = URL.createObjectURL(file);
+        await img.decode(); const c = document.createElement('canvas');
+        c.width = img.width; c.height = img.height;
+        c.getContext('2d').drawImage(img, 0, 0);
+        bitmap = await createImageBitmap(c);
+      }
+
       const cnv = document.createElement('canvas');
       cnv.width = W; cnv.height = H;
       const ctx = cnv.getContext('2d', { willReadFrequently: true });
@@ -226,19 +264,18 @@
       const dataUrl = cnv.toDataURL('image/png');
 
       await channel.send({
-        type: 'broadcast',
-        event: 'cmd',
+        type: 'broadcast', event: 'cmd',
         payload: {
           type: 'mosaic',
           startAt: Date.now() + 1200,
-          targetGroup: null,
+          targetGroup,
           payload: { width: W, height: H, imageDataUrl: dataUrl, intensity }
         }
       });
-      alert('Mosaico enviado. Pide a la gente verificar sus (x,y).');
+      alert('Mosaico enviado. Verifica posiciones (x,y).');
     }
 
-    // Wire-up UI
+    // UI
     els.connectBtn.addEventListener('click', connect);
     els.disconnectBtn.addEventListener('click', disconnect);
     els.startBtn.addEventListener('click', () => sendEffect(true));
@@ -247,3 +284,4 @@
   </script>
 </body>
 </html>
+
